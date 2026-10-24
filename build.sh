@@ -17,7 +17,7 @@ RUSTFLAGS="-C target-cpu=mvp -C target-feature=+atomics,+bulk-memory,+mutable-gl
   cargo +nightly build --manifest-path "$ROOT/wasm/Cargo.toml" --target wasm32-unknown-unknown --release \
   -Z build-std=panic_abort,std --target-dir "$ROOT/build/wasm"
 rm -rf "$OUT" && mkdir -p "$OUT/pkg"
-cp "$ROOT"/plugin/* "$OUT/"
+cp "$ROOT"/plugin/* "$ROOT/LICENSE" "$ROOT/NOTICE" "$OUT/"
 wasm-bindgen --target no-modules --no-typescript --out-dir "$OUT/pkg" \
   "$ROOT/build/wasm/wasm32-unknown-unknown/release/lazy_town_exporter.wasm"
 # the module rides in a script: a plugin page is a file, and a worker cannot fetch a file
