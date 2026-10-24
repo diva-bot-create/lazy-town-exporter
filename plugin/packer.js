@@ -24,7 +24,7 @@ onmessage = function (e) {
     var t0 = performance.now();
     var bytes = wasm_bindgen.pack(d.library, d.blobs);
     var buf = bytes.buffer;
-    postMessage({ bytes: buf, packMs: Math.round(performance.now() - t0), times: wasm_bindgen.last_times() }, [buf]);
+    postMessage({ bytes: buf, packMs: Math.round(performance.now() - t0), times: wasm_bindgen.last_times(), warnings: wasm_bindgen.last_warnings() }, [buf]);
   } catch (err) {
     postMessage({ error: String(err && err.message || err) });
   }

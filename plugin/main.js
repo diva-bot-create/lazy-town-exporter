@@ -316,11 +316,15 @@ function publish() {
     var text = lib.name + '.fra  ·  ' + (bytes.byteLength / 1048576).toFixed(1) + ' MB  ·  packed in ' +
       (r.packMs / 1000).toFixed(2) + ' s on ' + publisher.threads + ' threads';
     log('log', '[Lazy Town Exporter] published ' + text + ' (' + ms + ' ms in the plugin)');
+    // what was packed anyway: each to FrayTools' log, and a count on the result
+    var warned = r.warnings ? r.warnings.split('\n') : [];
+    warned.forEach(function (w) { log('warn', '[Lazy Town Exporter] ' + w); });
+    if (warned.length) text += '  ·  ' + warned.length + ' missing sprite' + (warned.length > 1 ? 's' : '') + ' drawn as placeholders';
     var wait = shown ? Math.max(0, LEAST_LOOP_MS - (performance.now() - shown.since)) : 0;
     setTimeout(function () {
       var done = shown ? shown.anim.finish() : Promise.resolve();
       done.then(function () {
-        caption(text, 'done');
+        caption(text, warned.length ? 'warn' : 'done');
         setTimeout(function () { busy = false; send('publishEnd', { files: files }); }, HOLD_RESULT_MS);
       });
     }, wait);

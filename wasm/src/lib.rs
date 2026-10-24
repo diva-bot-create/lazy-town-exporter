@@ -56,10 +56,16 @@ pub fn pack(library: &str, blobs: js_sys::Array) -> Result<Vec<u8>, JsValue> {
     let mut t = format!("read {read_ms}");
     for (n, ms) in steps { t.push_str(&format!(", {n} {ms}")); }
     *TIMES.lock().unwrap() = t;
+    *WARNINGS.lock().unwrap() = built.warnings.join("\n");
     Ok(built.bytes)
 }
 
 static TIMES: Mutex<String> = Mutex::new(String::new());
+static WARNINGS: Mutex<String> = Mutex::new(String::new());
+
+/// what the last `pack` packed anyway (a missing picture drawn as the editor's placeholder), a line each
+#[wasm_bindgen]
+pub fn last_warnings() -> String { WARNINGS.lock().unwrap().clone() }
 
 /// how long each step of the last `pack` took, in milliseconds
 #[wasm_bindgen]
