@@ -113,7 +113,7 @@ dependencies = [
 [[package]]
 name = "fra_pack"
 version = "0.8.0"
-source = "git+https://github.com/otsono/Peptide?branch=main#f92780097adcda40aae284d729691557c6be8ed0"
+source = "git+https://github.com/otsono/Peptide?branch=main#f6f33998095e6011bdc731bb1ac461b607116422"
 dependencies = [
  "anyhow",
  "crc32fast",
