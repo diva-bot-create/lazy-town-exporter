@@ -39,13 +39,23 @@ fra_pack = { path = "../Peptide/crates/fra-pack" }
 
 ## Tech details
 
-- The packer is Peptide's `fra_pack` crate, compiled to WebAssembly with threads and run on a
-  pool of workers, one per core.
-- Sheets are compressed in bands of rows in parallel, then joined into one PNG stream.
-- Colours are rounded through premultiplied alpha the way FrayTools stores them.
-- Output is the same bytes on any machine, at any thread count, and matches `peptide pack`.
-- Kirby packs in about 0.3 s and Sky Pillars in about 1 s, where FrayTools' exporter takes 25 s
-  and 8 s. Most of a publish is FrayTools gathering the project before any exporter runs, which
-  no plugin can change.
-- Built for FrayTools' Chrome 80 engine: shared memory without isolation, no SIMD, no reference
-  types.
+- A fighter with 2,562 sprites packs in under a second. FrayTools' exporter takes about 25 s.
+- A stage with 131 full-size backdrop images packs in about a second. FrayTools' exporter takes
+  about 8 s.
+- Before any exporter runs, FrayTools spends a few seconds (longer for big stages) gathering the
+  project. That part is FrayTools' own and no plugin can speed it up.
+- The packer is Peptide's `fra_pack` crate in Rust, compiled to WebAssembly with threads. A Web
+  Worker runs it, and a pool of more workers, one per core, shares its memory through
+  `SharedArrayBuffer` as a [rayon](https://github.com/rayon-rs/rayon) thread pool.
+- Pictures decode and sprite sheets compress in parallel. Each sheet is split into bands of rows
+  that deflate side by side and join back into one PNG stream, so even a single huge sheet uses
+  every core.
+- The JSON half of the work (entities, scripts, the package header) stays on one thread: in
+  WebAssembly every thread shares one allocator lock, and millions of small allocations run
+  slower spread out than in a row.
+- Colours are rounded through premultiplied alpha the way FrayTools stores them, which is a big
+  part of why see-through stage art packs so much smaller.
+- Output is the same bytes on any machine and at any thread count, and matches `peptide pack`.
+- Built for FrayTools' Chrome 80 engine: the WebAssembly MVP plus threads and bulk memory, with
+  no SIMD or reference types. The module ships inside a script, since a plugin page is a local
+  file and its workers can't fetch one.
