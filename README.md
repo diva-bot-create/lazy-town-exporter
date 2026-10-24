@@ -1,6 +1,6 @@
 # Lazy Town Exporter
 
-Publish in a blink.
+Export in a blink.
 
 Lazy Town Exporter replaces FrayTools' exporter with one that uses every core you've got. The
 export step that used to eat up to half a minute now takes about a second, and your packages
