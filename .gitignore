@@ -1,2 +1,4 @@
 build/
 target/
+.cargo/
+wasm/.cargo/

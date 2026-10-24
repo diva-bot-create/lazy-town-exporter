@@ -1,4 +1,4 @@
-//! The package builder (crates/fra-pack) for the browser. FrayTools runs a publish plugin in a page, and a page's
+//! The package builder (Peptide's fra_pack) for the browser. FrayTools runs a publish plugin in a page, and a page's
 //! main thread may not block, which a thread pool does; so the plugin runs this in a worker,
 //! which starts the pool's threads as more workers sharing this module's memory.
 //!

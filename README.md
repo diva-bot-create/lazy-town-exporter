@@ -40,10 +40,17 @@ cargo install wasm-bindgen-cli --version 0.2.129
 ```
 
 the plugin lands in `build/LazyTownExporter` (and `build/LazyTownExporter.zip`).
-`cargo test` runs the packer's own tests natively.
+
+the package builder is [Peptide](https://github.com/otsono/Peptide)'s `fra_pack` crate, fetched by
+git. to build against a local Peptide checkout instead, put this in `.cargo/config.toml` (it is
+ignored by git):
+
+```
+[patch."https://github.com/otsono/Peptide"]
+fra_pack = { path = "../Peptide/crates/fra-pack" }
+```
 
 ## layout
 
-- `crates/fra-pack`: the package builder, from a project's library held in memory
-- `wasm`: that builder for the browser, with its thread pool
+- `wasm`: Peptide's package builder for the browser, with its thread pool
 - `plugin`: the plugin page FrayTools loads, its workers, and the animations
