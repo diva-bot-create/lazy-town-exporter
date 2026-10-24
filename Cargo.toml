@@ -1,0 +1,6 @@
+# the browser build sets flags the native one must not see, so the two are separate workspaces:
+# this one is the packer for native use and its tests; wasm/ builds on its own (build.sh)
+[workspace]
+members = ["crates/fra-pack"]
+exclude = ["wasm"]
+resolver = "2"

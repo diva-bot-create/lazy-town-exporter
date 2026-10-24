@@ -1,0 +1,7 @@
+{
+  "version": "0.1.0",
+  "type": "PublishPlugin",
+  "id": "dev.lazytown.Exporter",
+  "name": "Lazy Town Exporter",
+  "description": "Publishes Fraymakers content on every core, in a fraction of the time."
+}
