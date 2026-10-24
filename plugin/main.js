@@ -300,6 +300,7 @@ function publish() {
   var t0 = performance.now();
   var lib;
   try { lib = library(); } catch (e) { return failed(e.message); }
+  if (publisher && publisher.broken) publisher = null;
   if (!publisher) {
     if (typeof SharedArrayBuffer === 'undefined') return failed('this FrayTools does not give plugins shared memory, which the packer\'s threads need');
     publisher = new Publisher(navigator.hardwareConcurrency || 4);

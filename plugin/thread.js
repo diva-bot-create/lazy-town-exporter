@@ -11,5 +11,10 @@ onmessage = function (e) {
     return;
   }
   postMessage({ up: true });
-  wasm_bindgen.pool_run(d.queue);
+  try {
+    wasm_bindgen.pool_run(d.queue);
+  } catch (err) {
+    // the thread trapped (most often the module ran out of memory); the publisher fails the pack
+    postMessage({ error: String(err && err.message || err) });
+  }
 };

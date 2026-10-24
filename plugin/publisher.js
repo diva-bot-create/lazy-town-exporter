@@ -9,21 +9,39 @@ function Publisher(threads) {
     waiting = { resolve: resolve, reject: reject };
   });
   var job = null;
-  packer.onerror = function (e) { var w = waiting || job; if (w) w.reject(new Error(e.message || 'the packer stopped')); };
+  var workers = [packer];
+  var self = this;
+  // a worker that stops mid-pack leaves the rest waiting on it for good, so the pack fails and
+  // every worker goes; the next publish starts over
+  function stopped(message) {
+    var w = waiting || job;
+    waiting = job = null;
+    self.broken = true;
+    workers.forEach(function (x) { x.terminate(); });
+    if (w) w.reject(new Error(message));
+  }
+  packer.onerror = function (e) { stopped(e.message || 'the packer stopped'); };
   packer.onmessage = function (e) {
     var d = e.data;
-    if (d.error) { var w = waiting || job; if (w) w.reject(new Error(d.error)); return; }
+    // a failed pack may have left the module's memory half-built, so it is not reused either
+    if (d.error) { stopped(d.error); return; }
     if (d.pool) {
       var up = [];
       for (var i = 0; i < threads; i++) {
         up.push(new Promise(function (resolve, reject) {
-          var t = new Worker('thread.js');
-          t.onmessage = function (m) { m.data && m.data.error ? reject(new Error(m.data.error)) : resolve(); };
-          t.onerror = function (err) { reject(new Error(err.message || 'a packer thread did not start')); };
+          var t = new Worker('thread.js'), started = false;
+          workers.push(t);
+          t.onmessage = function (m) {
+            if (m.data && m.data.error) { if (started) stopped(m.data.error); else reject(new Error(m.data.error)); return; }
+            started = true; resolve();
+          };
+          t.onerror = function (err) {
+            if (started) stopped(err.message || 'a packer thread stopped'); else reject(new Error(err.message || 'a packer thread did not start'));
+          };
           t.postMessage({ module: d.module, memory: d.memory, queue: d.queue });
         }));
       }
-      Promise.all(up).then(function () { var w = waiting; waiting = null; w.resolve(); }, function (err) { waiting.reject(err); });
+      Promise.all(up).then(function () { var w = waiting; waiting = null; w.resolve(); }, function (err) { stopped(err.message); });
       return;
     }
     if (d.bytes) { var j = job; job = null; j.resolve(d); }
