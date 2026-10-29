@@ -19,6 +19,16 @@ default costume, snapping together into a finished package.
    Exporter for your project.
 4. Publish like you always do.
 
+## Settings
+
+Open them from the plugin's settings in FrayTools. They're saved with the project.
+
+- **JSON compression type** and **PNG compression**: the same two settings as Fraymakers Content
+  Exporter, writing the package the way it would. PNG compression on packs the sheets a little
+  smaller and takes a little longer.
+- **Skip the publish animation**: publishes with just a caption. You can also click the animation
+  during any publish to skip the rest of it.
+
 ## Build
 
 ```

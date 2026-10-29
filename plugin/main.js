@@ -2,13 +2,61 @@
 // the project's assets, and the page hands back the files to write. The packing runs in a
 // worker (publisher.js starts it and its threads), because building it on threads means waiting,
 // and a page may not. While it waits the page plays one of the animations in anims.js, picked
-// at random each time it opens.
+// at random each time it opens; a click on it skips the rest, and the project's settings can
+// turn it off.
 var UID = null;
 var props = null;
 var publisher = null;
 var busy = false;
 var shown = null;   // the animation on the stage, and when it started
 var art = null;
+var skip = null;    // the current publish's skip: settles when the stage is clicked
+
+// the project's settings, kept by FrayTools with the project: the editor's own exporter's two
+// (its JSON compression type and PNG compression) and whether the animation plays
+function settings() {
+  var c = props.configMetadata || {};
+  return { header: c.jsonCompression || 'raw', pngMax: c.pngCompression === true, quiet: c.skipAnimation === true };
+}
+function saveSetting(key, value) {
+  var c = {};
+  for (var k in props.configMetadata) c[k] = props.configMetadata[k];
+  c[key] = value;
+  props.configMetadata = c;
+  send('pluginConfigSyncRequest', { data: { configMetadata: c } });
+}
+function settingsForm(view) {
+  var c = settings();
+  var row = function (label, control) {
+    var r = document.createElement('label');
+    r.className = 'setting';
+    var t = document.createElement('span');
+    t.textContent = label;
+    r.appendChild(t);
+    r.appendChild(control);
+    view.appendChild(r);
+  };
+  var select = function (options, value, onChange) {
+    var el = document.createElement('select');
+    options.forEach(function (o) {
+      var opt = document.createElement('option');
+      opt.value = o[0]; opt.textContent = o[1];
+      el.appendChild(opt);
+    });
+    el.value = value;
+    el.addEventListener('change', function () { onChange(el.value); });
+    return el;
+  };
+  row('JSON compression type', select([['raw', 'Raw'], ['base64', 'Base64'], ['prettify', 'Prettify']], c.header,
+    function (v) { saveSetting('jsonCompression', v); }));
+  row('PNG compression', select([['false', 'Disabled (faster / larger file size)'], ['true', 'Enabled (slower / smaller file size)']],
+    String(c.pngMax), function (v) { saveSetting('pngCompression', v === 'true'); }));
+  var box = document.createElement('input');
+  box.type = 'checkbox';
+  box.checked = c.quiet;
+  box.addEventListener('change', function () { saveSetting('skipAnimation', box.checked); });
+  row('Skip the publish animation', box);
+}
 
 function send(command, data) { parent.postMessage({ id: UID, command: command, data: data }, '*'); }
 function log(level) { send('pluginLog', { level: level, args: [].slice.call(arguments, 1) }); }
@@ -212,12 +260,22 @@ function render() {
   var view = document.getElementById('view');
   view.innerHTML = '';
   if (props.configMode) {
-    view.textContent = 'Nothing to set: the package is built the way the engine loads it.';
+    settingsForm(view);
+    return;
+  }
+  if (settings().quiet) {
+    var plain = document.createElement('div');
+    plain.id = 'caption';
+    plain.className = 'caption';
+    view.appendChild(plain);
+    caption(busy ? 'Publishing...' : 'Ready');
     return;
   }
   if (!art) art = findArt();
   var stage = document.createElement('div');
   stage.className = 'stage' + (busy ? '' : ' idle');
+  stage.title = 'Click to skip';
+  stage.addEventListener('click', function () { if (busy && skip) skip.now(); });
   view.appendChild(stage);
   var cap = document.createElement('div');
   cap.id = 'caption';
@@ -289,9 +347,21 @@ var LEAST_LOOP_MS = 600;
 // result is held this long before they are handed over
 var HOLD_RESULT_MS = 700;
 
+// settles when the stage is clicked, or at once once it has been
+function skipper() {
+  var now = null;
+  var p = new Promise(function (resolve) { now = resolve; });
+  p.now = function () { p.done = true; now(); };
+  return p;
+}
+function after(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
 function publish() {
   if (busy) return;
   busy = true;
+  skip = skipper();
+  var mine = skip;
+  var conf = settings();
   send('publishStart');
   caption('Publishing...');
   var stage = document.querySelector('.stage');
@@ -305,7 +375,7 @@ function publish() {
     if (typeof SharedArrayBuffer === 'undefined') return failed('this FrayTools does not give plugins shared memory, which the packer\'s threads need');
     publisher = new Publisher(navigator.hardwareConcurrency || 4);
   }
-  publisher.pack(lib.json, lib.blobs).then(function (r) {
+  publisher.pack(lib.json, lib.blobs, conf).then(function (r) {
     // FrayTools takes a file's bytes as a Uint8Array, whatever the field is called
     var bytes = new Uint8Array(r.bytes);
     var files = {};
@@ -320,19 +390,25 @@ function publish() {
     var warned = r.warnings ? r.warnings.split('\n') : [];
     warned.forEach(function (w) { log('warn', '[Lazy Town Exporter] ' + w); });
     if (warned.length) text += '  ·  ' + warned.length + ' missing sprite' + (warned.length > 1 ? 's' : '') + ' drawn as placeholders';
-    var wait = shown ? Math.max(0, LEAST_LOOP_MS - (performance.now() - shown.since)) : 0;
-    setTimeout(function () {
-      var done = shown ? shown.anim.finish() : Promise.resolve();
-      done.then(function () {
-        caption(text, warned.length ? 'warn' : 'done');
-        setTimeout(function () { busy = false; send('publishEnd', { files: files }); }, HOLD_RESULT_MS);
-      });
-    }, wait);
+    // no animation (the setting, or none on the stage) hands the files over at once; a click on
+    // the stage cuts what is left of it, the loop, the finish and the hold alike
+    var playing = shown && !conf.quiet;
+    var wait = playing ? Math.max(0, LEAST_LOOP_MS - (performance.now() - shown.since)) : 0;
+    var finished = after(wait).then(function () { return mine.done || !playing ? null : shown.anim.finish(); });
+    Promise.race([finished, mine]).then(function () {
+      caption(text, warned.length ? 'warn' : 'done');
+      return Promise.race([after(playing ? HOLD_RESULT_MS : 0), mine]);
+    }).then(function () {
+      skip = null;
+      busy = false;
+      send('publishEnd', { files: files });
+    });
   }, function (err) { failed(err.message); });
 }
 
 function failed(message) {
   busy = false;
+  skip = null;
   caption(message, 'err');
   log('error', '[Lazy Town Exporter] ' + message);
   send('publishError', { message: message });

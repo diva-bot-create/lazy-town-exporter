@@ -45,13 +45,14 @@ pub fn pool_run(queue: u32) {
 
 /// Build the package. `library` is the JSON the plugin made of what FrayTools handed it, with
 /// every file's bytes replaced by an index into `blobs`. The JS values become Rust data here,
-/// on the calling worker; only that goes to the pool's threads.
+/// on the calling worker; only that goes to the pool's threads. `header` and `png_max` are the
+/// project's settings: the JSON compression type (`raw`, `base64`, `prettify`) and PNG compression.
 #[wasm_bindgen]
-pub fn pack(library: &str, blobs: js_sys::Array) -> Result<Vec<u8>, JsValue> {
+pub fn pack(library: &str, blobs: js_sys::Array, header: &str, png_max: bool) -> Result<Vec<u8>, JsValue> {
     let t0 = js_sys::Date::now();
     let lib = read(library, &blobs).map_err(|e| JsValue::from_str(&format!("{e:#}")))?;
     let read_ms = js_sys::Date::now() - t0;
-    let run = || fra_pack::build_timed(&lib, fra_pack::Options { parallel_json: false }, &js_sys::Date::now).map_err(|e| format!("{e:#}"));
+    let run = || fra_pack::build_timed(&lib, fra_pack::Options { parallel_json: false, header: fra_pack::HeaderText::named(header), png_max }, &js_sys::Date::now).map_err(|e| format!("{e:#}"));
     let (built, steps) = match POOL.get() { Some(p) => p.install(run), None => run() }.map_err(|e| JsValue::from_str(&e))?;
     let mut t = format!("read {read_ms}");
     for (n, ms) in steps { t.push_str(&format!(", {n} {ms}")); }

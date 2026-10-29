@@ -22,7 +22,7 @@ onmessage = function (e) {
   }
   try {
     var t0 = performance.now();
-    var bytes = wasm_bindgen.pack(d.library, d.blobs);
+    var bytes = wasm_bindgen.pack(d.library, d.blobs, d.header || 'raw', d.pngMax === true);
     var buf = bytes.buffer;
     postMessage({ bytes: buf, packMs: Math.round(performance.now() - t0), times: wasm_bindgen.last_times(), warnings: wasm_bindgen.last_warnings() }, [buf]);
   } catch (err) {

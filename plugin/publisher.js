@@ -48,12 +48,13 @@ function Publisher(threads) {
   };
   packer.postMessage({ start: threads });
   this.threads = threads;
-  // the package's bytes, from the library JSON and the files' bytes it points into
-  this.pack = function (library, blobs) {
+  // the package's bytes, from the library JSON and the files' bytes it points into, written
+  // with the project's settings (`header`: raw, base64 or prettify; `pngMax`: the smallest sheets)
+  this.pack = function (library, blobs, settings) {
     return ready.then(function () {
       return new Promise(function (resolve, reject) {
         job = { resolve: resolve, reject: reject };
-        packer.postMessage({ library: library, blobs: blobs });
+        packer.postMessage({ library: library, blobs: blobs, header: settings.header, pngMax: settings.pngMax });
       });
     });
   };
