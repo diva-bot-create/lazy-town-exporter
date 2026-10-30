@@ -113,7 +113,7 @@ dependencies = [
 [[package]]
 name = "fra_pack"
 version = "0.8.1"
-source = "git+https://github.com/otsono/Peptide?branch=main#93935f01cd8b543d3d8b46cf3ec8e4dea1098449"
+source = "git+https://github.com/otsono/Peptide?branch=main#f2e13a928b2af4c42c58b32a47cbcbd51bc936a7"
 dependencies = [
  "anyhow",
  "crc32fast",
@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "lazy_town_exporter"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "fra_pack",
